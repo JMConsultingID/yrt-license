@@ -161,7 +161,7 @@ function validateLicense($pdo) {
      $account_id = $data['account_id'];
 
      // Prepare SQL statement to prevent SQL injection
-     $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE license_key = :license_key AND account_id = :account_id AND status = 'active'");
+     $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE license_key = :license_key AND account_id = :account_id AND license_status = 'active'");
      $stmt->bindParam(':license_key', $license_key);
      $stmt->bindParam(':account_id', $account_id);
      
