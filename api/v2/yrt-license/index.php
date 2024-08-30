@@ -242,6 +242,7 @@ function handleEditRequest($pdo) {
     $id = $data['id'];
     $email = isset($data['email']) ? $data['email'] : null;
     $full_name = isset($data['full_name']) ? $data['full_name'] : null;
+    $account_id = isset($data['account_id']) ? $data['account_id'] : null;
     $license_key = isset($data['license_key']) ? $data['license_key'] : null;
     $license_status = isset($data['license_status']) ? $data['license_status'] : null;
     $additional_info = isset($data['additional_info']) ? $data['additional_info'] : null;
@@ -250,6 +251,7 @@ function handleEditRequest($pdo) {
     $fields = [];
     if ($email !== null) $fields[] = "email = :email";
     if ($full_name !== null) $fields[] = "full_name = :full_name";
+    if ($account_id !== null) $fields[] = "account_id = :account_id";
     if ($license_key !== null) $fields[] = "license_key = :license_key";
     if ($license_status !== null) $fields[] = "license_status = :license_status";
     if ($additional_info !== null) $fields[] = "additional_info = :additional_info";
@@ -267,6 +269,7 @@ function handleEditRequest($pdo) {
     $stmt->bindParam(':id', $id, PDO::PARAM_INT);
     if ($email !== null) $stmt->bindParam(':email', $email, PDO::PARAM_STR);
     if ($full_name !== null) $stmt->bindParam(':full_name', $full_name, PDO::PARAM_STR);
+    if ($account_id !== null) $stmt->bindParam(':account_id', $account_id, PDO::PARAM_STR);
     if ($license_key !== null) $stmt->bindParam(':license_key', $license_key, PDO::PARAM_STR);
     if ($license_status !== null) $stmt->bindParam(':license_status', $license_status, PDO::PARAM_STR);
     if ($additional_info !== null) $stmt->bindParam(':additional_info', $additional_info, PDO::PARAM_STR);
