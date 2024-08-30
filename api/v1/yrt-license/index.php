@@ -174,7 +174,7 @@ function handleNewPostRequest($pdo) {
     $data = json_decode(file_get_contents("php://input"), true);
 
     // Check if required parameters exist
-    $required_fields = ['email', 'full_name', 'order_id', 'product_id', 'product_name', 'account_id', 'license_key', 'source'];
+    $required_fields = ['email', 'full_name', 'order_id', 'product_id', 'product_name', 'account_id', 'license_key', 'license_expiration','source'];
     foreach ($required_fields as $field) {
         if (!isset($data[$field]) || empty($data[$field])) {
             http_response_code(400);
@@ -190,6 +190,7 @@ function handleNewPostRequest($pdo) {
     $product_name = $data['product_name'];
     $account_id = $data['account_id'];
     $license_key = $data['license_key'];
+    $license_expiration = $data['license_expiration'];
     $source = $data['source'];
     $additional_info = isset($data['additional_info']) ? $data['additional_info'] : ''; // Optional field
 
@@ -217,8 +218,8 @@ function handleNewPostRequest($pdo) {
     $activation_date = date('Y-m-d H:i:s'); // Set current time as activation date
 
     // Insert new license data into the database
-    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_status, account_creation_date, source, additional_info) 
-                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :status, :activation_date, :source, :additional_info)");
+    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_expiration, license_status, source, additional_info, account_creation_date) 
+                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :license_expiration, :license_status, :source, :additional_info, :account_creation_date)");
     $stmt->bindParam(':email', $email);
     $stmt->bindParam(':full_name', $full_name);
     $stmt->bindParam(':order_id', $order_id);
@@ -226,11 +227,12 @@ function handleNewPostRequest($pdo) {
     $stmt->bindParam(':product_name', $product_name);
     $stmt->bindParam(':account_id', $account_id);
     $stmt->bindParam(':license_key', $license_key);
+    $stmt->bindParam(':license_expiration', $license_expiration);
     $stmt->bindParam(':license_status', $status);
-    $stmt->bindParam(':account_creation_date', $activation_date);
     $stmt->bindParam(':source', $source);
     $stmt->bindParam(':additional_info', $additional_info);
-
+    $stmt->bindParam(':account_creation_date', $activation_date); 
+    
     if ($stmt->execute()) {
         http_response_code(201);
         echo json_encode(['message' => 'License inserted successfully to the database']);
