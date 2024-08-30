@@ -26,7 +26,13 @@ $action = trim($action, '/'); // Remove any leading or trailing slashes
 
 switch ($method) {
     case 'GET':
-        handleGetRequest($pdo, $action); // Ensure both arguments are passed
+        if (empty($action)) {
+            // Default action: Fetch all licenses with pagination and search
+            handleGetRequest($pdo);
+        } else {
+            // Fetch specific license or handle specific action
+            handleGetRequest($pdo, $action);
+        }
         break;
     case 'POST':
         if ($action === 'validate') {
