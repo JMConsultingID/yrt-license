@@ -31,6 +31,8 @@ switch ($method) {
     case 'POST':
         if ($action === 'validate') {
             validateLicense($pdo);
+        } elseif ($action === 'new'){
+            handleNewPostRequest($pdo);
         } else {
             handlePostRequest($pdo);
         }
@@ -166,4 +168,76 @@ function validateLicense($pdo) {
      echo json_encode(['message' => 'Method Not Allowed']);
  }
 }
+
+function handleNewPostRequest($pdo) {
+    // Get JSON data from the request body
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    // Check if required parameters exist
+    $required_fields = ['email', 'full_name', 'order_id', 'product_id', 'product_name', 'account_id', 'license_key', 'source'];
+    foreach ($required_fields as $field) {
+        if (!isset($data[$field]) || empty($data[$field])) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Bad Request: Missing or empty required field (' . $field . ')']);
+            return;
+        }
+    }
+
+    $email = $data['email'];
+    $full_name = $data['full_name'];
+    $order_id = $data['order_id'];
+    $product_id = $data['product_id'];
+    $product_name = $data['product_name'];
+    $account_id = $data['account_id'];
+    $license_key = $data['license_key'];
+    $source = $data['source'];
+    $additional_info = isset($data['additional_info']) ? $data['additional_info'] : ''; // Optional field
+
+    // Validate the format of license_key (length and pattern)
+    if (!preg_match('/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/', $license_key)) {
+        http_response_code(400);
+        echo json_encode(['message' => 'Bad Request: Invalid license_key format. It must be 16 characters long with dashes (e.g., XXXX-XXXX-XXXX-XXXX)']);
+        return;
+    }
+
+    // Check if the license_key and account_id already exist in the database
+    $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE license_key = :license_key AND account_id = :account_id");
+    $stmt->bindParam(':license_key', $license_key);
+    $stmt->bindParam(':account_id', $account_id);
+    $stmt->execute();
+    $existingLicense = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existingLicense) {
+        http_response_code(409); // 409 Conflict
+        echo json_encode(['message' => 'Conflict: The combination of license_key and account_id already exists']);
+        return;
+    }
+
+    $status = 'active'; // Set status as active
+    $activation_date = date('Y-m-d H:i:s'); // Set current time as activation date
+
+    // Insert new license data into the database
+    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_status, activation_date, source, additional_info) 
+                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :status, :activation_date, :source, :additional_info)");
+    $stmt->bindParam(':email', $email);
+    $stmt->bindParam(':full_name', $full_name);
+    $stmt->bindParam(':order_id', $order_id);
+    $stmt->bindParam(':product_id', $product_id);
+    $stmt->bindParam(':product_name', $product_name);
+    $stmt->bindParam(':account_id', $account_id);
+    $stmt->bindParam(':license_key', $license_key);
+    $stmt->bindParam(':license_status', $status);
+    $stmt->bindParam(':activation_date', $activation_date);
+    $stmt->bindParam(':source', $source);
+    $stmt->bindParam(':additional_info', $additional_info);
+
+    if ($stmt->execute()) {
+        http_response_code(201);
+        echo json_encode(['message' => 'License inserted successfully to the database']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['message' => 'Internal Server Error']);
+    }
+}
+
 ?>
