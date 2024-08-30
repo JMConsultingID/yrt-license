@@ -84,9 +84,9 @@ function handleGetRequest($pdo, $account_id = null) {
     if ($search) {
         $search_term = '%' . $search . '%';
         $base_query .= $account_id ? " AND " : " WHERE ";
-        $base_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search)";
+        $base_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search OR order_id LIKE :search)";
         $count_query .= $account_id ? " AND " : " WHERE ";
-        $count_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search)";
+        $count_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search OR order_id LIKE :search)";
     }
 
     // Add LIMIT and OFFSET for pagination
