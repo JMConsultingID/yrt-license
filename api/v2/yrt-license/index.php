@@ -43,6 +43,16 @@ switch ($method) {
             handlePostRequest($pdo);
         }
         break;
+    case 'PUT':
+    case 'PATCH':
+        // Handle edit action
+        if ($action === 'edit') {
+            handleEditRequest($pdo);
+        } else {
+            http_response_code(400);
+            echo json_encode(['message' => 'Bad Request: Unknown action for edit']);
+        }
+        break;
     default:
         http_response_code(405);
         echo json_encode(['message' => 'Method Not Allowed']);
@@ -193,6 +203,61 @@ function handlePostRequest($pdo) {
     } else {
         http_response_code(500);
         echo json_encode(['message' => 'Internal Server Error']);
+    }
+}
+
+// Function to handle editing a license
+function handleEditRequest($pdo) {
+    // Parse the input data
+    parse_str(file_get_contents("php://input"), $data);
+
+    // Validate input data
+    if (!isset($data['id'])) {
+        http_response_code(400);
+        echo json_encode(['message' => 'Bad Request: Missing required field (id)']);
+        return;
+    }
+
+    // Set up variables
+    $id = $data['id'];
+    $email = isset($data['email']) ? $data['email'] : null;
+    $full_name = isset($data['full_name']) ? $data['full_name'] : null;
+    $license_key = isset($data['license_key']) ? $data['license_key'] : null;
+    $license_status = isset($data['license_status']) ? $data['license_status'] : null;
+    $additional_info = isset($data['additional_info']) ? $data['additional_info'] : null;
+
+    // Prepare the SQL query to update the license
+    $fields = [];
+    if ($email !== null) $fields[] = "email = :email";
+    if ($full_name !== null) $fields[] = "full_name = :full_name";
+    if ($license_key !== null) $fields[] = "license_key = :license_key";
+    if ($license_status !== null) $fields[] = "license_status = :license_status";
+    if ($additional_info !== null) $fields[] = "additional_info = :additional_info";
+
+    if (empty($fields)) {
+        http_response_code(400);
+        echo json_encode(['message' => 'Bad Request: No fields to update']);
+        return;
+    }
+
+    $sql = "UPDATE yrt_ea_license_key SET " . implode(", ", $fields) . " WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+
+    // Bind parameters
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+    if ($email !== null) $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+    if ($full_name !== null) $stmt->bindParam(':full_name', $full_name, PDO::PARAM_STR);
+    if ($license_key !== null) $stmt->bindParam(':license_key', $license_key, PDO::PARAM_STR);
+    if ($license_status !== null) $stmt->bindParam(':license_status', $license_status, PDO::PARAM_STR);
+    if ($additional_info !== null) $stmt->bindParam(':additional_info', $additional_info, PDO::PARAM_STR);
+
+    // Execute the query
+    if ($stmt->execute()) {
+        http_response_code(200);
+        echo json_encode(['message' => 'License updated successfully']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['message' => 'Internal Server Error: Unable to update license']);
     }
 }
 
