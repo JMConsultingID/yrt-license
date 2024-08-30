@@ -5,5 +5,5 @@ RewriteBase /api/v2/yrt-license/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Rewrite all other URLs to index.php
+# Rewrite all other URLs to index.php and preserve query strings
 RewriteRule ^(.*)$ index.php [QSA,L]

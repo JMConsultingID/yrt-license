@@ -21,7 +21,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $base_path = '/api/v2/yrt-license/';
 
 // Remove the base path from the request URI to extract the action
-$action = str_replace($base_path, '', $request_uri);
+$action = str_replace($base_path, '', parse_url($request_uri, PHP_URL_PATH)); // Only parse path, not query string
 $action = trim($action, '/'); // Remove any leading or trailing slashes
 
 switch ($method) {
@@ -37,7 +37,7 @@ switch ($method) {
     case 'POST':
         if ($action === 'validate') {
             validateLicense($pdo);
-        } elseif ($action === 'new'){
+        } elseif ($action === 'new') {
             handleNewPostRequest($pdo);
         } else {
             handlePostRequest($pdo);
