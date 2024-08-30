@@ -200,10 +200,11 @@ function handlePostRequest($pdo) {
 
     $status = 'active'; // Set status as active
     $activation_date = date('Y-m-d H:i:s'); // Set current time as activation date
+    $account_modify_date = date('Y-m-d H:i:s');
 
     // Insert new license data into the database
-    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_expiration, license_status, source, additional_info, account_creation_date) 
-                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :license_expiration, :license_status, :source, :additional_info, :account_creation_date)");
+    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_expiration, license_status, source, additional_info, account_creation_date, account_modify_date) 
+                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :license_expiration, :license_status, :source, :additional_info, :account_creation_date, :account_modify_date)");
     $stmt->bindParam(':email', $email);
     $stmt->bindParam(':full_name', $full_name);
     $stmt->bindParam(':order_id', $order_id);
@@ -215,7 +216,8 @@ function handlePostRequest($pdo) {
     $stmt->bindParam(':license_status', $status);
     $stmt->bindParam(':source', $source);
     $stmt->bindParam(':additional_info', $additional_info);
-    $stmt->bindParam(':account_creation_date', $activation_date); 
+    $stmt->bindParam(':account_creation_date', $activation_date);
+    $stmt->bindParam(':account_modify_date', $account_modify_date); 
     
     if ($stmt->execute()) {
         http_response_code(201);
@@ -246,6 +248,7 @@ function handleEditRequest($pdo) {
     $license_key = isset($data['license_key']) ? $data['license_key'] : null;
     $license_status = isset($data['license_status']) ? $data['license_status'] : null;
     $additional_info = isset($data['additional_info']) ? $data['additional_info'] : null;
+    $account_modify_date = date('Y-m-d H:i:s');
 
     // Prepare the SQL query to update the license
     $fields = [];
@@ -255,6 +258,7 @@ function handleEditRequest($pdo) {
     if ($license_key !== null) $fields[] = "license_key = :license_key";
     if ($license_status !== null) $fields[] = "license_status = :license_status";
     if ($additional_info !== null) $fields[] = "additional_info = :additional_info";
+    if ($account_modify_date !== null) $fields[] = "account_modify_date = :account_modify_date";
 
     if (empty($fields)) {
         http_response_code(400);
@@ -273,6 +277,7 @@ function handleEditRequest($pdo) {
     if ($license_key !== null) $stmt->bindParam(':license_key', $license_key, PDO::PARAM_STR);
     if ($license_status !== null) $stmt->bindParam(':license_status', $license_status, PDO::PARAM_STR);
     if ($additional_info !== null) $stmt->bindParam(':additional_info', $additional_info, PDO::PARAM_STR);
+    if ($account_modify_date !== null) $stmt->bindParam(':account_modify_date', $account_modify_date, PDO::PARAM_STR);
 
     // Execute the query
     if ($stmt->execute()) {
