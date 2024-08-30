@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /api/v1/yrt-license/
+
+# If the requested file or directory exists, do not rewrite
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Rewrite all other URLs to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
