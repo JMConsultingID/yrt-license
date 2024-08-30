@@ -20,18 +20,21 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Define the base path for the API
 $base_path = '/api/v2/yrt-license/';
 
-// Remove the base path from the request URI to extract the action
+// Remove the base path from the request URI to extract the action or ID
 $action = str_replace($base_path, '', parse_url($request_uri, PHP_URL_PATH)); // Only parse path, not query string
 $action = trim($action, '/'); // Remove any leading or trailing slashes
 
 switch ($method) {
     case 'GET':
-        if (empty($action)) {
+        if (is_numeric($action)) {
+            // If action is a numeric ID, fetch the specific license by ID
+            handleGetRequestById($pdo, intval($action));
+        } elseif (empty($action)) {
             // Default action: Fetch all licenses with pagination and search
             handleGetRequest($pdo);
         } else {
-            // Fetch specific license or handle specific action
-            handleGetRequest($pdo, $action);
+            http_response_code(400);
+            echo json_encode(['message' => 'Bad Request: Invalid action']);
         }
         break;
     case 'POST':
@@ -45,7 +48,6 @@ switch ($method) {
         break;
     case 'PUT':
     case 'PATCH':
-        // Handle edit action
         if ($action === 'edit') {
             handleEditRequest($pdo);
         } else {
@@ -130,6 +132,24 @@ function handleGetRequest($pdo, $account_id = null) {
         'page' => $page,
         'total_pages' => $total_pages,
     ]);
+}
+
+// Function to handle fetching a specific license by ID
+function handleGetRequestById($pdo, $id) {
+    // Prepare the SQL query to fetch data for a specific license ID
+    $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE id = :id");
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+    $stmt->execute();
+    $license = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($license) {
+        // If license is found, return it as JSON
+        echo json_encode($license);
+    } else {
+        // If no license is found, return a 404 error
+        http_response_code(404);
+        echo json_encode(['message' => 'License not found']);
+    }
 }
 
 
