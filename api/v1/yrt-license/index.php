@@ -217,7 +217,7 @@ function handleNewPostRequest($pdo) {
     $activation_date = date('Y-m-d H:i:s'); // Set current time as activation date
 
     // Insert new license data into the database
-    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_status, activation_date, source, additional_info) 
+    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_status, account_creation_date, source, additional_info) 
                            VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :status, :activation_date, :source, :additional_info)");
     $stmt->bindParam(':email', $email);
     $stmt->bindParam(':full_name', $full_name);
@@ -227,7 +227,7 @@ function handleNewPostRequest($pdo) {
     $stmt->bindParam(':account_id', $account_id);
     $stmt->bindParam(':license_key', $license_key);
     $stmt->bindParam(':license_status', $status);
-    $stmt->bindParam(':activation_date', $activation_date);
+    $stmt->bindParam(':account_creation_date', $activation_date);
     $stmt->bindParam(':source', $source);
     $stmt->bindParam(':additional_info', $additional_info);
 
