@@ -18,7 +18,7 @@ $request_uri = $_SERVER['REQUEST_URI'];
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Define the base path for the API
-$base_path = '/api/v1/yrt-license/';
+$base_path = '/api/v2/yrt-license/';
 
 // Remove the base path from the request URI to extract the action
 $action = str_replace($base_path, '', $request_uri);
@@ -31,6 +31,8 @@ switch ($method) {
     case 'POST':
         if ($action === 'validate') {
             validateLicense($pdo);
+        } elseif ($action === 'new'){
+            handleNewPostRequest($pdo);
         } else {
             handlePostRequest($pdo);
         }
@@ -44,7 +46,7 @@ switch ($method) {
 function handleGetRequest($pdo, $account_id) {
     if ($account_id) {
         // Prepare the SQL query to fetch data for a specific account_id
-        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license WHERE account_id = :account_id");
+        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE account_id = :account_id");
         $stmt->bindParam(':account_id', $account_id);
         $stmt->execute();
         $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -57,7 +59,7 @@ function handleGetRequest($pdo, $account_id) {
         }
     } else {
         // Retrieve all license data if account_id is not provided
-        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license");
+        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key");
         $stmt->execute();
         $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -69,22 +71,26 @@ function handlePostRequest($pdo) {
     // Get JSON data from the request body
     $data = json_decode(file_get_contents("php://input"), true);
 
-    // Check if the 'license_key' and 'account_id' parameters exist
-    if (!isset($data['license_key']) || !isset($data['account_id'])) {
-        http_response_code(400);
-        echo json_encode(['message' => 'Bad Request: Missing required fields (license_key, account_id)']);
-        return;
+    // Check if required parameters exist
+    $required_fields = ['email', 'full_name', 'order_id', 'product_id', 'product_name', 'account_id', 'license_key', 'license_expiration','source'];
+    foreach ($required_fields as $field) {
+        if (!isset($data[$field]) || empty($data[$field])) {
+            http_response_code(400);
+            echo json_encode(['message' => 'Bad Request: Missing or empty required field (' . $field . ')']);
+            return;
+        }
     }
 
-    $license_key = $data['license_key'];
+    $email = $data['email'];
+    $full_name = $data['full_name'];
+    $order_id = $data['order_id'];
+    $product_id = $data['product_id'];
+    $product_name = $data['product_name'];
     $account_id = $data['account_id'];
-
-    // Check if 'license_key' and 'account_id' have values
-    if (empty($license_key) || empty($account_id)) {
-        http_response_code(400);
-        echo json_encode(['message' => 'Bad Request: Fields license_key and account_id cannot be empty']);
-        return;
-    }
+    $license_key = $data['license_key'];
+    $license_expiration = $data['license_expiration'];
+    $source = $data['source'];
+    $additional_info = isset($data['additional_info']) ? $data['additional_info'] : ''; // Optional field
 
     // Validate the format of license_key (length and pattern)
     if (!preg_match('/^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$/', $license_key)) {
@@ -94,7 +100,7 @@ function handlePostRequest($pdo) {
     }
 
     // Check if the license_key and account_id already exist in the database
-    $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license WHERE license_key = :license_key AND account_id = :account_id");
+    $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE license_key = :license_key AND account_id = :account_id");
     $stmt->bindParam(':license_key', $license_key);
     $stmt->bindParam(':account_id', $account_id);
     $stmt->execute();
@@ -110,15 +116,24 @@ function handlePostRequest($pdo) {
     $activation_date = date('Y-m-d H:i:s'); // Set current time as activation date
 
     // Insert new license data into the database
-    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license (license_key, account_id, status, activation_date) VALUES (:license_key, :account_id, :status, :activation_date)");
-    $stmt->bindParam(':license_key', $license_key);
+    $stmt = $pdo->prepare("INSERT INTO yrt_ea_license_key (email, full_name, order_id, product_id, product_name, account_id, license_key, license_expiration, license_status, source, additional_info, account_creation_date) 
+                           VALUES (:email, :full_name, :order_id, :product_id, :product_name, :account_id, :license_key, :license_expiration, :license_status, :source, :additional_info, :account_creation_date)");
+    $stmt->bindParam(':email', $email);
+    $stmt->bindParam(':full_name', $full_name);
+    $stmt->bindParam(':order_id', $order_id);
+    $stmt->bindParam(':product_id', $product_id);
+    $stmt->bindParam(':product_name', $product_name);
     $stmt->bindParam(':account_id', $account_id);
-    $stmt->bindParam(':status', $status);
-    $stmt->bindParam(':activation_date', $activation_date);
-
+    $stmt->bindParam(':license_key', $license_key);
+    $stmt->bindParam(':license_expiration', $license_expiration);
+    $stmt->bindParam(':license_status', $status);
+    $stmt->bindParam(':source', $source);
+    $stmt->bindParam(':additional_info', $additional_info);
+    $stmt->bindParam(':account_creation_date', $activation_date); 
+    
     if ($stmt->execute()) {
         http_response_code(201);
-        echo json_encode(['message' => 'License Inserted successfully to database']);
+        echo json_encode(['message' => 'License inserted successfully to the database']);
     } else {
         http_response_code(500);
         echo json_encode(['message' => 'Internal Server Error']);
