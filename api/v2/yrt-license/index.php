@@ -228,8 +228,8 @@ function handlePostRequest($pdo) {
 
 // Function to handle editing a license
 function handleEditRequest($pdo) {
-    // Parse the input data
-    parse_str(file_get_contents("php://input"), $data);
+    // Parse the input data as JSON
+    $data = json_decode(file_get_contents("php://input"), true);
 
     // Validate input data
     if (!isset($data['id'])) {
@@ -280,6 +280,7 @@ function handleEditRequest($pdo) {
         echo json_encode(['message' => 'Internal Server Error: Unable to update license']);
     }
 }
+
 
 function validateLicense($pdo) {
  // Check if the request method is POST
