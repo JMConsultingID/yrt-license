@@ -66,6 +66,8 @@ function handleGetRequest($pdo, $account_id = null) {
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $order_by = isset($_GET['order_by']) ? $_GET['order_by'] : 'id'; // Default order by 'id'
+    $order = isset($_GET['order']) && strtolower($_GET['order']) === 'asc' ? 'ASC' : 'DESC'; // Default order 'DESC'
 
     // Set up pagination
     $offset = ($page - 1) * $limit;
@@ -88,6 +90,9 @@ function handleGetRequest($pdo, $account_id = null) {
         $count_query .= $account_id ? " AND " : " WHERE ";
         $count_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search OR order_id LIKE :search)";
     }
+
+    // Add ordering clause
+    $base_query .= " ORDER BY $order_by $order";
 
     // Add LIMIT and OFFSET for pagination
     $base_query .= " LIMIT :limit OFFSET :offset";
