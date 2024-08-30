@@ -43,29 +43,79 @@ switch ($method) {
         break;
 }
 
-function handleGetRequest($pdo, $account_id) {
+function handleGetRequest($pdo, $account_id = null) {
+    // Get query parameters for pagination and search
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+    // Set up pagination
+    $offset = ($page - 1) * $limit;
+
+    // Base SQL query
+    $base_query = "SELECT * FROM yrt_ea_license_key";
+    $count_query = "SELECT COUNT(*) FROM yrt_ea_license_key";
+
+    // Modify query for account_id
     if ($account_id) {
-        // Prepare the SQL query to fetch data for a specific account_id
-        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key WHERE account_id = :account_id");
-        $stmt->bindParam(':account_id', $account_id);
-        $stmt->execute();
-        $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if ($licenses) {
-            echo json_encode($licenses);
-        } else {
-            http_response_code(404);
-            echo json_encode(['message' => 'No data found for the provided account_id']);
-        }
-    } else {
-        // Retrieve all license data if account_id is not provided
-        $stmt = $pdo->prepare("SELECT * FROM yrt_ea_license_key");
-        $stmt->execute();
-        $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        echo json_encode($licenses);
+        $base_query .= " WHERE account_id = :account_id";
+        $count_query .= " WHERE account_id = :account_id";
     }
+
+    // Modify query for search
+    if ($search) {
+        $search_term = '%' . $search . '%';
+        $base_query .= $account_id ? " AND " : " WHERE ";
+        $base_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search)";
+        $count_query .= $account_id ? " AND " : " WHERE ";
+        $count_query .= "(email LIKE :search OR full_name LIKE :search OR license_key LIKE :search)";
+    }
+
+    // Add LIMIT and OFFSET for pagination
+    $base_query .= " LIMIT :limit OFFSET :offset";
+
+    // Prepare the SQL statement for fetching data
+    $stmt = $pdo->prepare($base_query);
+
+    // Bind parameters if needed
+    if ($account_id) {
+        $stmt->bindParam(':account_id', $account_id, PDO::PARAM_STR);
+    }
+    if ($search) {
+        $stmt->bindParam(':search', $search_term, PDO::PARAM_STR);
+    }
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+    $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Prepare the SQL statement for counting total results
+    $count_stmt = $pdo->prepare($count_query);
+
+    // Bind parameters if needed
+    if ($account_id) {
+        $count_stmt->bindParam(':account_id', $account_id, PDO::PARAM_STR);
+    }
+    if ($search) {
+        $count_stmt->bindParam(':search', $search_term, PDO::PARAM_STR);
+    }
+
+    $count_stmt->execute();
+    $total_results = $count_stmt->fetchColumn();
+
+    // Calculate total pages
+    $total_pages = ceil($total_results / $limit);
+
+    // Return the response
+    echo json_encode([
+        'data' => $licenses,
+        'total' => $total_results,
+        'page' => $page,
+        'total_pages' => $total_pages,
+    ]);
 }
+
 
 function handlePostRequest($pdo) {
     // Get JSON data from the request body
